@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+<header>
+    <h1 align="center">A Halloween Candy Visualization</h1>
+    <h2 align="center">by Sanjana Raman</h2>
+
+    <palign="center">This visualization was made using the candy.csv data set. The data was collected using a survey in which respondents would rate their preferences of each candy. Each response is graphically represented by a square. Upon clicking on a type of candy, you will be able to see each persons feeling towards the candy selected (green representing JOY, yellow representing MEH and red representing DESPAIR. You can further filter by demographics explore further questions you may have about the data set.</p>
+</header>
+
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Candy Visualization</title>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/d3/4.7.2/d3.min.js"></script>
+        <script type="text/javascript" src="d3pie.min.js"></script>
+
+        <style>
+            body {
+	            font: 12px sans-serif;
+	        }
+            #wrapper {
+                clear:both;
+            }
+            #candiesList {
+                float:left;
+            }
+            #filtering {
+                float:left;
+            }
+            #pieChart {
+            }
+            .rect {
+                fill:blue;
+            }
+            .square {
+              stroke:white;
+            }
+            .squares:hover {
+              fill: brown;
+            }
+
+        </style>
+    </head>
+    <body>
+    <div id="wrapper">
+ 	  <div id="candiesList" style="width: 130px; float:left; margin-top:100px">
+          <text>Please select a candy to view each respondent's preferences:</text>
+
+            </div>
+ 	  <div id="graph" style="margin-left:150px;">
+            <div id="filterPrefs" style="float:left;">
+              <form name="gender">
+                <text>Gender:</text>
+                <select name="genders" id="genderVal">
+                  <option value="All">All</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="I'd rather not say">I'd rather not say</option>
+                  <option value="Other">Other</option>
+                </select>
+              </form>
+              <form name="country">
+                <text>Country:</text>
+                <select name="countries" id="countryVal">
+                  <option value="All">All</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Denmark">Denmark</option>
+                  <option value="Germany">Germany</option>
+                  <option value="Ireland">Ireland</option>
+                  <option value="Japan">Japan</option>
+                  <option value="Mexico">Mexico</option>
+                  <option value="Netherlands">Netherlands</option>
+                  <option value="Scotland">Scotland</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="United States">United States</option>
+                </select>
+              </form>
+              <form name="ageRange">
+                  <text>Min age: </text><input type="text" value=0 id="minAge">
+                  <text>Max age: </text><input type="text" value = 100 id="maxAge">
+              </form> </br>
+              <div id="filterButton"></div>
+              <strong>Candy Selected: </strong> <span id="candySelected"></span><br/><br/>
+              <strong>Going Out?: </strong> <span id="goingOut"></span></br>
+              <strong>State/Province: </strong> <span id="state"></span></br>
+              <strong>Other Joy: </strong> <span id="joy"></span></br></br>
+              <strong>Other Despair: </strong> <span id="despair"></span></br></br>
+              <strong>Comments: </strong> <span id="comments"></span></br></br>
+
+
+          </div>
+          <div id="pieChart" style="margin-left:400px; width:1000px">
+            </div>
+      </div>
+    </div>
+
+    <script>
+    var width = 1008;
+	var height= 796;
+    var squareW= 24;
+    var despairNo = 0;
+    var joyNo = 0;
+    var mehNo = 0;
+    var buttonNumber=-1;
+    var graph = document.getElementById('graph');
+
+    var screenData = d3.select(graph)
+        .append('svg')
+        .attr("width",width)
+        .attr("height",height);
+
+    var squares = screenData.append('g');
+//THE GRAPH SHOULD BE 33 by 42 AND FIT ALL THE SQUARES
+//EACH SQUARE IS 24x24
+
+    var xScale = d3.scaleLinear().range([0, width]);
+    var yScale = d3.scaleLinear().range([0, height]);
+
+    xScale.domain([0, width]);
+    yScale.domain([0, height]);
+
+    var dataInput = [
+      { label: "Preference", value: 1, color: "grey"},
+    ];
+
+
+      var pie = new d3pie("pieChart", {
+      	"size": {
+      		"canvasWidth": 350,
+            "canvasHeight": 300,
+      		"pieOuterRadius": "90%"
+      	},
+      	"data": {
+      		"sortOrder": "value-desc",
+      		"content": dataInput
+      	},
+      	"labels": {
+      		"outer": {
+      			"pieDistance": 32
+      		},
+      		"inner": {
+      			"hideWhenLessThanPercentage": 3
+      		},
+      		"mainLabel": {
+      			"fontSize": 11
+      		},
+      		"percentage": {
+      			"color": "#ffffff",
+      			"decimalPlaces": 0
+      		},
+      		"value": {
+      			"color": "#adadad",
+      			"fontSize": 11
+      		},
+      		"lines": {
+      			"enabled": true
+      		},
+      		"truncation": {
+      			"enabled": true
+      		}
+      	},
+      	"effects": {
+      		"pullOutSegmentOnClick": {
+      			"effect": "linear",
+      			"speed": 400,
+      			"size": 8
+      		}
+      	},
+      	"misc": {
+      		"gradient": {
+      			"enabled": true,
+      			"percentage": 100
+      		}
+      	}
+      });
+
+    d3.select("#nAge").on("input", function() {
+        d3.select("#nAge-value").text(+this.value);
+    });
+
+    d3.csv("candy.csv", function(data) {
+
+        candies = ["Full Size Bar", "Butterfingers", "Candy Corn", "Chiclets", "Dots", "Fuzzy Peaches", "Good N Plenty", "Gummy Bears", "Healthy Fruit", "Health Bar", "Hershey's Dark", "Hershey's Milk", "Hershey's Kisses", "Jolly Ranchers Bad", "Jolly Ranchers Good", "Junior Mints", "KitKat", "LaffyTaffy", "LemonHeads", "Non Black Licorice", "Black Licorice", "Lollipops", "Mike and Ike", "Milk Duds", "Milky Way", "Regular M&Ms", "Peanut M&Ms", "Mint Kisses", "Mr. Goodbar", "Nerds", "Nestle Cruch", "Peeps", "Pixy Stix", "Reese's Peanut Butter Cups", "Reese's Pieces", "Rolos", "Skittles", "Snickers", "Sourpatch Kids", "Starburst", "Swedish Fish", "TicTacs", "Three Musketeers", "Toblerone", "Trail Mix", "Twix", "Whatchamacallit Bars", "York Peppermint Patties"];
+        console.log(candies.length);
+
+        candies.forEach(function(lol) {
+            loll = Object.keys(lol);
+        });
+        console.log(candies);
+    //    console.log(loll);
+	    for (var i=0; i<data.length; ++i) {
+			data[i].GOINGOUT = data[i].Q1_GOING_OUT;
+			data[i].GENDER = data[i].Q2_GENDER;
+			data[i].AGE = Number(data[i].Q3_AGE);
+			data[i].COUNTRY = data[i].Q4_COUNTRY;
+            data[i].STATE = data[i].Q5_STATE_PROVINCE_COUNTY_ETC;
+            data[i].CANDY0 = data[i].Q6_Any_full_sized_candy_bar;
+            data[i].CANDY1 = data[i].Q6_Butterfinger;
+            data[i].CANDY2 = data[i].Q6_Candy_Corn;
+            data[i].CANDY3 = data[i].Q6_Chiclets;
+            data[i].CANDY4 = data[i].Q6_Dots;
+            data[i].CANDY5 = data[i].Q6_Fuzzy_Peaches;
+            data[i].CANDY6 = data[i].Q6_Good_N_Plenty;
+            data[i].CANDY7 = data[i].Q6_Gummy_Bears_straight_up;
+            data[i].CANDY8 = data[i].Q6_Healthy_Fruit;
+            data[i].CANDY9 = data[i].Q6_Heath_Bar;
+            data[i].CANDY10 = data[i].Q6_Hershey_s_Dark_Chocolate;
+            data[i].CANDY11 = data[i].Q6_Hershey_s_Milk_Chocolate;
+            data[i].CANDY12 = data[i].Q6_Hershey_s_Kisses;
+            data[i].CANDY13 = data[i].Q6_Jolly_Rancher_bad_flavor;
+            data[i].CANDY14 = data[i].Q6_Jolly_Ranchers_good_flavor;
+            data[i].CANDY15 = data[i].Q6_Junior_Mints;
+            data[i].CANDY16 = data[i].Q6_Kit_Kat;
+            data[i].CANDY17 = data[i].Q6_LaffyTaffy;
+            data[i].CANDY18 = data[i].Q6_LemonHeads;
+            data[i].CANDY19 = data[i].Q6_Licorice_not_black;
+            data[i].CANDY20 = data[i].Q6_Licorice_yes_black;
+            data[i].CANDY21 = data[i].Q6_Lollipops;
+            data[i].CANDY22 = data[i].Q6_Mike_and_Ike;
+            data[i].CANDY23 = data[i].Q6_Milk_Duds;
+            data[i].CANDY24 = data[i].Q6_Milky_Way;
+            data[i].CANDY25 = data[i].Q6_Regular_M_Ms;
+            data[i].CANDY26 = data[i].Q6_Peanut_M_M_s;
+            data[i].CANDY27 = data[i].Q6_Mint_Kisses;
+            data[i].CANDY28 = data[i].Q6_Mr_Goodbar;
+            data[i].CANDY29 = data[i].Q6_Nerds;
+            data[i].CANDY30 = data[i].Q6_Nestle_Crunch;
+            data[i].CANDY31 = data[i].Q6_Peeps;
+            data[i].CANDY32 = data[i].Q6_Pixy_Stix;
+            data[i].CANDY33 = data[i].Q6_Reese_s_Peanut_Butter_Cups;
+            data[i].CANDY34 = data[i].Q6_Reese_s_Pieces;
+            data[i].CANDY35 = data[i].Q6_Rolos;
+            data[i].CANDY36 = data[i].Q6_Skittles;
+            data[i].CANDY37 = data[i].Q6_Snickers;
+            data[i].CANDY38 = data[i].Q6_Sourpatch_Kids_i_e_abominations_of_nature;
+            data[i].CANDY39 = data[i].Q6_Starburst;
+            data[i].CANDY40 = data[i].Q6_Swedish_Fish;
+            data[i].CANDY41 = data[i].Q6_Tic_Tacs;
+            data[i].CANDY42 = data[i].Q6_Three_Musketeers;
+            data[i].CANDY43 = data[i].Q6_Tolberone_something_or_other;
+            data[i].CANDY44 = data[i].Q6_Trail_Mix;
+            data[i].CANDY45 = data[i].Q6_Twix;
+            data[i].CANDY46 = data[i].Q6_Whatchamacallit_Bars;
+            data[i].CANDY47 = data[i].Q6_York_Peppermint_Patties;
+            data[i].JOYOTHER = data[i].Q7_JOY_OTHER;
+            data[i].DESPAIROTHER = data[i].Q8_DESPAIR_OTHER;
+            data[i].COMMENTS = data[i].Q9_OTHER_COMMENTS
+            data[i].ID = i;
+            data[i].COLOR = "grey";
+	    }
+
+        function reset(i) {
+        var count = -1;
+        squares.append('g')
+            .selectAll('.square')
+            .data(data)
+            .enter()
+            .append('rect')
+            .attr('class', 'square')
+            .attr('x', function(d) {
+                return xScale((d.ID%42)*24);
+            })
+            .attr('y', function(d) {
+                if (d.ID%42 == 0) {
+                    count++;
+                }
+                return yScale(count*24);
+            })
+            .attr('width', squareW)
+            .attr('height', squareW)
+            .on('mouseover', function(d) {
+                document.getElementById("goingOut").textContent = d.GOINGOUT;
+                document.getElementById("state").textContent = d.STATE;
+                document.getElementById("joy").textContent = d.JOYOTHER;
+                document.getElementById("despair").textContent = d.DESPAIROTHER;
+                document.getElementById("comments").textContent = d.COMMENTS;
+
+//FILL THIS WITH QUALITATIVE STUFF
+            })
+            .attr('fill', function(d) {
+                candyData = getCandyData(d, i);
+                if (candyData == "MEH") {
+                    mehNo = mehNo + 1;
+                    d.COLOR = "yellow";
+                    return "yellow";
+                } else if (candyData == "DESPAIR") {
+                    despairNo = despairNo + 1;
+                    d.COLOR = "red";
+                    return "red";
+                } else if (candyData == "JOY") {
+                    joyNo = joyNo + 1;
+                    d.COLOR = "green";
+                    return "green";
+                } else {
+                    return "grey";
+                }
+            });
+
+            var candySelection = document.getElementById("candySelected");
+            candySelection.textContent = candies[i];
+
+        }
+
+        function updateCountry() {
+            if (countryVal.value != "All") {
+            squares.selectAll('.square')
+                .filter(function(d) {
+                    return d.COUNTRY != countryVal.value;
+                })
+                .transition()
+                .duration(function(d) {
+                    return Math.random() * 1000;
+                })
+                .delay(function(d) {
+                    return Math.random() * 1000
+                })
+                .style('fill', 'white');
+        }
+
+        squares.selectAll('.square')
+            .filter(function(d) {
+                return d.fill != countryVal.value;
+            })
+
+    }
+
+        function resetPieChart() {
+            dataInput = [{
+              label: "Despair", value: despairNo, color: "red"
+          }, {label: "Meh", value: mehNo, color: "yellow"},
+          {label: "Joy", value: joyNo, color: "green"}
+      ];
+            pie.updateProp("data.content", dataInput);
+
+            despairNo = 0;
+            joyNo = 0;
+            mehNo = 0;
+
+        }
+
+        function updateGender() {
+            if (genderVal.value != "All") {
+            squares.selectAll('.square')
+                .filter(function(d) {
+                    console.log(genderVal.value);
+                    return d.GENDER != genderVal.value;
+                })
+                .transition()
+                .duration(function(d) {
+                    return Math.random() * 1000;
+                })
+                .delay(function(d) {
+                    return Math.random() * 1000
+                })
+                .style('fill', 'white');
+        }}
+
+        function updateAge() {
+            squares.selectAll('.square')
+                .filter(function(d) {
+                    return (d.AGE <= minAge.value && d.AGE >= maxAge.value);
+                })
+                .transition()
+                .duration(function(d) {
+                    return Math.random() * 1000;
+                })
+                .delay(function(d) {
+                    return Math.random() * 1000
+                })
+                .style('fill', 'white');
+        }
+
+
+
+        function getCandyData(d, i) {
+            if (i == 0) { return d.CANDY0}; if (i == 1) { return d.CANDY1}; if (i == 2) { return d.CANDY2}; if (i == 3) { return d.CANDY3}; if (i == 4) { return d.CANDY4};  if (i == 5) { return d.CANDY5}; if (i == 6) { return d.CANDY6}; if (i == 7) { return d.CANDY7}; if (i == 8) { return d.CANDY8}; if (i == 9) { return d.CANDY9}; if (i == 10) { return d.CANDY10}; if (i == 11) { return d.CANDY11}; if (i == 12) { return d.CANDY12}; if (i == 13) { return d.CANDY13}; if (i == 14) { return d.CANDY14};  if (i == 15) { return d.CANDY15}; if (i == 16) { return d.CANDY16}; if (i == 17) { return d.CANDY17}; if (i == 18) { return d.CANDY18}; if (i == 19) { return d.CANDY19}; if (i == 20) { return d.CANDY20}; if (i == 21) { return d.CANDY21}; if (i == 22) { return d.CANDY22}; if (i == 23) { return d.CANDY23}; if (i == 24) { return d.CANDY24};  if (i == 25) { return d.CANDY25}; if (i == 26) { return d.CANDY26}; if (i == 27) { return d.CANDY27}; if (i == 28) { return d.CANDY28}; if (i == 29) { return d.CANDY29}; if (i == 30) { return d.CANDY30}; if (i == 31) { return d.CANDY31}; if (i == 32) { return d.CANDY32}; if (i == 33) { return d.CANDY33}; if (i == 34) { return d.CANDY34};  if (i == 35) { return d.CANDY35}; if (i == 36) { return d.CANDY36}; if (i == 37) { return d.CANDY17}; if (i == 38) { return d.CANDY38}; if (i == 39) { return d.CANDY19}; if (i == 40) { return d.CANDY40};  if (i == 41) { return d.CANDY41}; if (i == 42) { return d.CANDY42}; if (i == 43) { return d.CANDY43}; if (i == 44) { return d.CANDY44};  if (i == 45) { return d.CANDY45}; if (i == 46) { return d.CANDY46}; if (i == 47) { return d.CANDY47}; if (i == 48) { return d.CANDY48};
+            return "BRUH";
+        }
+        reset(-1);
+
+
+        d3.select(candiesList)
+              .append("p")
+              .attr("class","list")
+              .each(function(d) {
+
+            for (var i = 0; i < 48; i++) {
+                count = 0;
+                d3.select("#candiesList")
+                  .append("button")
+                  .attr("type","button")
+                  .attr("class","list")
+                  .attr("float", "left")
+                  .style("width", "130px")
+                  .style("border-radius", "3px")
+                  .style("padding", "0 12px")
+                  .style("cursor", "pointer")
+                  .attr("id",function(d) { count++; return 'button'+i;})
+                  .append("div")
+                  .attr("class","label")
+                  .text(function(d) {return candies[i];})
+                }});
+
+                d3.select(filterButton)
+                    .append('p')
+                    .append('button')
+                    .text('Filter Data')
+                    .on('click', function() {
+                        despairNo = 0;
+                        joyNo = 0;
+                        mehNo = 0;
+                        reset(buttonNumber);
+                        console.log(joyNo);
+                        updateCountry();
+                        console.log(joyNo);
+                        updateAge();
+                        updateGender();
+                        resetPieChart();
+                    });
+
+
+
+        d3.select(button0).on("click", function(d) {buttonNumber=0; resetPieChart(); reset(0);});
+
+        d3.select(button1).on("click", function() {buttonNumber=1; resetPieChart();reset(1);});
+        d3.select(button2).on("click", function() {buttonNumber=2; resetPieChart();reset(2);});
+        d3.select(button3).on("click", function() {buttonNumber=3; resetPieChart();reset(3);});
+        d3.select(button4).on("click", function() {buttonNumber=4; resetPieChart();reset(4);});
+        d3.select(button5).on("click", function() {buttonNumber=5; resetPieChart();reset(5);});
+        d3.select(button6).on("click", function() {buttonNumber=6; resetPieChart();reset(6);});
+        d3.select(button7).on("click", function() {buttonNumber=7; resetPieChart();reset(7);});
+        d3.select(button8).on("click", function() {buttonNumber=8;resetPieChart(); reset(8);});
+        d3.select(button9).on("click", function() {buttonNumber=9; resetPieChart();reset(9);});
+        d3.select(button10).on("click",function(){buttonNumber=10; resetPieChart();reset(10);});
+        d3.select(button11).on("click", function() {buttonNumber=11;resetPieChart(); reset(11);});
+        d3.select(button12).on("click", function() {buttonNumber=12;resetPieChart(); reset(12);});
+        d3.select(button13).on("click", function() {buttonNumber=13;resetPieChart(); reset(13);});
+        d3.select(button14).on("click", function() {buttonNumber=14;resetPieChart(); reset(14);});
+        d3.select(button15).on("click", function() {buttonNumber=15;resetPieChart(); reset(15);});
+        d3.select(button16).on("click", function() {buttonNumber=16;resetPieChart(); reset(16);});
+        d3.select(button17).on("click", function() {buttonNumber=17;resetPieChart(); reset(17);});
+        d3.select(button18).on("click", function() {buttonNumber=18;resetPieChart(); reset(18);});
+        d3.select(button19).on("click", function() {buttonNumber=19;resetPieChart(); reset(19);});
+        d3.select(button20).on("click", function() {buttonNumber=20;resetPieChart(); reset(20);});
+        d3.select(button21).on("click", function() {buttonNumber=21;resetPieChart(); reset(21);});
+        d3.select(button22).on("click", function() {buttonNumber=22;resetPieChart(); reset(22);});
+        d3.select(button23).on("click", function() {buttonNumber=23;resetPieChart(); reset(23);});
+        d3.select(button24).on("click", function() {buttonNumber=24;resetPieChart(); reset(24);});
+        d3.select(button25).on("click", function() {buttonNumber=25;resetPieChart(); reset(25);});
+        d3.select(button26).on("click", function() {buttonNumber=26;resetPieChart(); reset(26);});
+        d3.select(button27).on("click", function() {buttonNumber=27;resetPieChart(); reset(27);});
+        d3.select(button28).on("click", function() {buttonNumber=28;resetPieChart(); reset(28);});
+        d3.select(button29).on("click", function() {buttonNumber=29;resetPieChart(); reset(29);});
+        d3.select(button30).on("click", function() {buttonNumber=30;resetPieChart(); reset(30);});
+        d3.select(button31).on("click", function() {buttonNumber=31;resetPieChart(); reset(31);});
+        d3.select(button32).on("click", function() {buttonNumber=32;resetPieChart(); reset(32);});
+        d3.select(button33).on("click", function() {buttonNumber=33;resetPieChart(); reset(33);});
+        d3.select(button34).on("click", function() {buttonNumber=34;resetPieChart(); reset(34);});
+        d3.select(button35).on("click", function() {buttonNumber=35;resetPieChart(); reset(35);});
+        d3.select(button36).on("click", function() {buttonNumber=36;resetPieChart(); reset(36);});
+        d3.select(button37).on("click", function() {buttonNumber=37;resetPieChart(); reset(37);});
+        d3.select(button38).on("click", function() {buttonNumber=38;resetPieChart(); reset(38);});
+        d3.select(button39).on("click", function() {buttonNumber=39;resetPieChart(); reset(39);});
+        d3.select(button40).on("click", function() {buttonNumber=40;resetPieChart(); reset(40);});
+        d3.select(button41).on("click", function() {buttonNumber=41;resetPieChart(); reset(41);});
+        d3.select(button42).on("click", function() {buttonNumber=42;resetPieChart(); reset(42);});
+        d3.select(button43).on("click", function() {buttonNumber=43;resetPieChart(); reset(43);});
+        d3.select(button44).on("click", function() {buttonNumber=44;resetPieChart(); reset(44);});
+        d3.select(button45).on("click", function() {buttonNumber=45;resetPieChart(); reset(45);});
+        d3.select(button46).on("click", function() {buttonNumber=46;resetPieChart(); reset(46);});
+        d3.select(button47).on("click", function() {buttonNumber=47;resetPieChart(); reset(47);});
+
+
+        d3.select(graph)
+            .append('p')
+            .append('button')
+            .text('Reset Filter')
+            .on('click', function() {
+                reset();
+            });
+
+
+    });
+
+
+
+  </script>
+  </body>
+</html>
